@@ -6,6 +6,24 @@ import io
 # --- Page Config ---
 st.set_page_config(page_title="AHP Multi-Sector Evaluator", layout="centered")
 
+# --- Inject Custom Slider Style ---
+st.markdown("""
+    <style>
+    /* Slider track coloring */
+    input[type=range]::-webkit-slider-runnable-track {
+        background: linear-gradient(to right, #ff4b4b 50%, #31333f 50%);
+    }
+    input[type=range]::-moz-range-track {
+        background: linear-gradient(to right, #ff4b4b 50%, #31333f 50%);
+    }
+    .stSlider > div[data-baseweb="slider"] > div {
+        width: 100% !important;
+        padding-left: 10px;
+        padding-right: 10px;
+    }
+    </style>
+""", unsafe_allow_html=True)
+
 # --- Constants ---
 CRITERIA = [
     "Carbon Reduction Potential and Environmental Co-Benefits",
@@ -32,42 +50,46 @@ SECTORS = [
     "critical mineral industry"
 ]
 
-# --- Definitions (to be replaced by real explanations) ---
-CRITERIA_INFO = {criterion: "deneme1" for criterion in CRITERIA}
-ALTERNATIVE_INFO = {alt: "deneme2" for alt in ALTERNATIVES}
-
 # --- AHP Logic ---
-def pairwise_matrix(items, session_key, info_dict):
+def pairwise_matrix(items, session_key):
     n = len(items)
     matrix = np.ones((n, n))
+    scale = list(range(-9, 10))  # -9 to 9
     for i in range(n):
         for j in range(i + 1, n):
             key = f"{session_key}_{i}_{j}"
-            col1, col2, col3 = st.columns([4, 2, 4])
+            col1, col2, col3 = st.columns([4, 6, 4])
             with col1:
                 st.markdown(
                     f"<div style='text-align:center; border:1px solid #ccc; padding:4px; border-radius:6px; font-size:14px;'>"
-                    f"{items[i]} <span title='{info_dict[items[i]]}' style='cursor:help;'>❔</span></div>",
+                    f"{items[i]}</div>",
                     unsafe_allow_html=True
                 )
             with col2:
-                val = st.slider(
+                selection = st.slider(
                     label=" ",
-                    min_value=1,
+                    min_value=-9,
                     max_value=9,
-                    value=1,
+                    value=0,
                     step=1,
                     key=key,
-                    help="Slide toward the option you find more important."
+                    help="0 = equally important, positive = right is more important, negative = left is more important"
                 )
+                if selection == 0:
+                    matrix[i][j] = 1
+                    matrix[j][i] = 1
+                elif selection > 0:
+                    matrix[i][j] = 1 / selection
+                    matrix[j][i] = selection
+                else:  # selection < 0
+                    matrix[i][j] = abs(selection)
+                    matrix[j][i] = 1 / abs(selection)
             with col3:
                 st.markdown(
                     f"<div style='text-align:center; border:1px solid #ccc; padding:4px; border-radius:6px; font-size:14px;'>"
-                    f"{items[j]} <span title='{info_dict[items[j]]}' style='cursor:help;'>❔</span></div>",
+                    f"{items[j]}</div>",
                     unsafe_allow_html=True
                 )
-            matrix[i][j] = val
-            matrix[j][i] = 1 / val
     return matrix
 
 
@@ -103,7 +125,7 @@ st.markdown("""
 st.header("① Compare Evaluation Criteria")
 with st.expander("Compare Criteria - Click to Expand"):
     st.write("Provide pairwise comparisons between the six evaluation criteria:")
-    criteria_matrix = pairwise_matrix(CRITERIA, "criteria", CRITERIA_INFO)
+    criteria_matrix = pairwise_matrix(CRITERIA, "criteria")
     criteria_weights = calculate_priority_vector(criteria_matrix)
     criteria_cr = consistency_ratio(criteria_matrix, criteria_weights)
 
@@ -124,8 +146,8 @@ sector_best_alternatives = {}
 for sector in SECTORS:
     st.subheader(f"{sector.title()}")
     for criterion in CRITERIA:
-        with st.expander(f"{criterion} ❔", expanded=False):
-            matrix = pairwise_matrix(ALTERNATIVES, f"{sector}_{criterion}", ALTERNATIVE_INFO)
+        with st.expander(f"{criterion}", expanded=False):
+            matrix = pairwise_matrix(ALTERNATIVES, f"{sector}_{criterion}")
             weights = calculate_priority_vector(matrix)
             cr = consistency_ratio(matrix, weights)
             df = pd.DataFrame({"Alternative": ALTERNATIVES, "Weight": weights})
@@ -156,7 +178,7 @@ for sector in SECTORS:
 
 st.header("④ Final AHP Between Sectoral Winners")
 final_alts = [f"{SECTORS[i].title()}: {alt}" for i, alt in enumerate([sector_best_alternatives[sec] for sec in SECTORS])]
-final_matrix = pairwise_matrix(final_alts, "final", {name: "write the definition info here" for name in final_alts})
+final_matrix = pairwise_matrix(final_alts, "final")
 final_weights = calculate_priority_vector(final_matrix)
 final_cr = consistency_ratio(final_matrix, final_weights)
 

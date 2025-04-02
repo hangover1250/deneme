@@ -32,8 +32,12 @@ SECTORS = [
     "critical mineral industry"
 ]
 
+# --- Definitions (to be replaced by real explanations) ---
+CRITERIA_INFO = {criterion: "write the definition info here" for criterion in CRITERIA}
+ALTERNATIVE_INFO = {alt: "write the definition info here" for alt in ALTERNATIVES}
+
 # --- AHP Logic ---
-def pairwise_matrix(items, session_key):
+def pairwise_matrix(items, session_key, info_dict):
     n = len(items)
     matrix = np.ones((n, n))
     for i in range(n):
@@ -41,7 +45,11 @@ def pairwise_matrix(items, session_key):
             key = f"{session_key}_{i}_{j}"
             col1, col2, col3 = st.columns([4, 2, 4])
             with col1:
-                st.markdown(f"<div style='text-align:center; border:1px solid #ccc; padding:8px; border-radius:6px;'>{items[i]}</div>", unsafe_allow_html=True)
+                st.markdown(
+                    f"<div style='text-align:center; border:1px solid #ccc; padding:4px; border-radius:6px; font-size:14px;'>"
+                    f"{items[i]} <span title='{info_dict[items[i]]}' style='cursor:help;'>❔</span></div>",
+                    unsafe_allow_html=True
+                )
             with col2:
                 val = st.slider(
                     label=" ",
@@ -53,7 +61,11 @@ def pairwise_matrix(items, session_key):
                     help="Slide toward the option you find more important."
                 )
             with col3:
-                st.markdown(f"<div style='text-align:center; border:1px solid #ccc; padding:8px; border-radius:6px;'>{items[j]}</div>", unsafe_allow_html=True)
+                st.markdown(
+                    f"<div style='text-align:center; border:1px solid #ccc; padding:4px; border-radius:6px; font-size:14px;'>"
+                    f"{items[j]} <span title='{info_dict[items[j]]}' style='cursor:help;'>❔</span></div>",
+                    unsafe_allow_html=True
+                )
             matrix[i][j] = val
             matrix[j][i] = 1 / val
     return matrix
@@ -91,7 +103,7 @@ st.markdown("""
 st.header("① Compare Evaluation Criteria")
 with st.expander("Compare Criteria - Click to Expand"):
     st.write("Provide pairwise comparisons between the six evaluation criteria:")
-    criteria_matrix = pairwise_matrix(CRITERIA, "criteria")
+    criteria_matrix = pairwise_matrix(CRITERIA, "criteria", CRITERIA_INFO)
     criteria_weights = calculate_priority_vector(criteria_matrix)
     criteria_cr = consistency_ratio(criteria_matrix, criteria_weights)
 
@@ -112,8 +124,8 @@ sector_best_alternatives = {}
 for sector in SECTORS:
     st.subheader(f"{sector.title()}")
     for criterion in CRITERIA:
-        with st.expander(f"{criterion}"):
-            matrix = pairwise_matrix(ALTERNATIVES, f"{sector}_{criterion}")
+        with st.expander(f"{criterion} ❔", expanded=False):
+            matrix = pairwise_matrix(ALTERNATIVES, f"{sector}_{criterion}", ALTERNATIVE_INFO)
             weights = calculate_priority_vector(matrix)
             cr = consistency_ratio(matrix, weights)
             df = pd.DataFrame({"Alternative": ALTERNATIVES, "Weight": weights})
@@ -144,7 +156,7 @@ for sector in SECTORS:
 
 st.header("④ Final AHP Between Sectoral Winners")
 final_alts = [f"{SECTORS[i].title()}: {alt}" for i, alt in enumerate([sector_best_alternatives[sec] for sec in SECTORS])]
-final_matrix = pairwise_matrix(final_alts, "final")
+final_matrix = pairwise_matrix(final_alts, "final", {name: "write the definition info here" for name in final_alts})
 final_weights = calculate_priority_vector(final_matrix)
 final_cr = consistency_ratio(final_matrix, final_weights)
 

@@ -33,8 +33,8 @@ SECTORS = [
 ]
 
 # --- Definitions (to be replaced by real explanations) ---
-CRITERIA_INFO = {criterion: "write the definition info here" for criterion in CRITERIA}
-ALTERNATIVE_INFO = {alt: "write the definition info here" for alt in ALTERNATIVES}
+CRITERIA_INFO = {criterion: "deneme1" for criterion in CRITERIA}
+ALTERNATIVE_INFO = {alt: "deneme2" for alt in ALTERNATIVES}
 
 # --- AHP Logic ---
 def pairwise_matrix(items, session_key, info_dict):

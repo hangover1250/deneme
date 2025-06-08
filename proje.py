@@ -305,6 +305,6 @@ if st.session_state.selected_sector is None:
     for s in SECTORS:
         if st.button(s.title()):
             st.session_state.selected_sector = s    
-            st.experimental_rerun()
+            st.rerun()
 else:
     run_sector(st.session_state.selected_sector)
